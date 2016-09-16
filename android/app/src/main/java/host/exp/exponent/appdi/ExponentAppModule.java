@@ -1,6 +1,6 @@
 // Copyright 2015-present 650 Industries. All rights reserved.
 
-package host.exp.exponent.di;
+package host.exp.exponent.appdi;
 
 import android.app.Application;
 import android.content.Context;
@@ -10,11 +10,11 @@ import dagger.Provides;
 import host.exp.exponent.ExponentApplication;
 
 @Module
-public class AppModule {
+public class ExponentAppModule {
 
   private final Application mApplication;
 
-  public AppModule(ExponentApplication application) {
+  public ExponentAppModule(Application application) {
     this.mApplication = application;
   }
 
