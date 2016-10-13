@@ -3,8 +3,6 @@
 #import "EXKernelModule.h"
 #import "RCTEventDispatcher.h"
 
-NSString * const kEXKernelJSIsLoadedNotification = @"EXKernelModuleIsLoadedNotification";
-
 @interface EXKernelModule ()
 
 @property (nonatomic, assign) BOOL hasListeners;
@@ -114,7 +112,7 @@ RCT_REMAP_METHOD(routeDidForeground,
 
 RCT_EXPORT_METHOD(onLoaded)
 {
-  [[NSNotificationCenter defaultCenter] postNotificationName:kEXKernelJSIsLoadedNotification object:self];
+  [[NSNotificationCenter defaultCenter] postNotificationName:EX_UNVERSIONED(@"EXKernelJSIsLoadedNotification") object:self];
 }
 
 RCT_REMAP_METHOD(getManifestAsync,

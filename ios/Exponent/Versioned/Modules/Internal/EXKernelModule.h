@@ -2,8 +2,6 @@
 
 #import "RCTEventEmitter.h"
 
-FOUNDATION_EXPORT NSString * const kEXKernelJSIsLoadedNotification;
-
 @class EXKernelModule;
 
 @protocol EXKernelModuleDelegate <NSObject>
