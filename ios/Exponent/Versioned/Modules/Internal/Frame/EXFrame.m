@@ -138,7 +138,7 @@ RCT_NOT_IMPLEMENTED(- (instancetype)initWithCoder:(NSCoder *)coder)
 {
   if ([self validateProps:@[ @"manifest", @"source" ]]) {
     [_appManager logKernelAnalyticsEventWithParams:@{
-                                                     @"eventIdentifier": @"RELOAD_EXPERIENCE",
+                                                     @"eventIdentifier": EX_UNVERSIONED(@"RELOAD_EXPERIENCE"),
                                                      @"manifestUrl": _source,
                                                      }];
     [_appManager reload];
@@ -147,11 +147,11 @@ RCT_NOT_IMPLEMENTED(- (instancetype)initWithCoder:(NSCoder *)coder)
 
 - (void)_checkForReload
 {
-  EXAssertMainThread();
+  RCTAssertMainThread();
   if (_needsReload) {
     if (_sourceSet && _source) {
       [_appManager logKernelAnalyticsEventWithParams:@{
-                                                       @"eventIdentifier": @"LOAD_EXPERIENCE",
+                                                       @"eventIdentifier": EX_UNVERSIONED(@"LOAD_EXPERIENCE"),
                                                        @"manifestUrl": _source,
                                                        }];
     }
@@ -199,7 +199,7 @@ RCT_NOT_IMPLEMENTED(- (instancetype)initWithCoder:(NSCoder *)coder)
  */
 - (void)enforceDesiredDeviceOrientation
 {
-  EXAssertMainThread();
+  RCTAssertMainThread();
   UIInterfaceOrientationMask mask = [self supportedInterfaceOrientations];
   UIDeviceOrientation currentOrientation = [[UIDevice currentDevice] orientation];
   if (mask == UIInterfaceOrientationMaskLandscape && (currentOrientation == UIDeviceOrientationPortrait)) {
