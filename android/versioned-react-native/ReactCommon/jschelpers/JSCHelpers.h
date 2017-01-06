@@ -2,15 +2,12 @@
 
 #pragma once
 
-#include "Executor.h"
-#include "Value.h"
-
-#include <JavaScriptCore/JSContextRef.h>
-#include <JavaScriptCore/JSObjectRef.h>
-#include <JavaScriptCore/JSValueRef.h>
+#include <jschelpers/Value.h>
+#include <jschelpers/JavaScriptCore.h>
 
 #include <stdexcept>
 #include <algorithm>
+#include <functional>
 
 namespace facebook {
 namespace react {
@@ -33,6 +30,23 @@ inline void throwJSExecutionExceptionWithStack(const char* msg, const char* stac
   throw JSException(msg, stack);
 }
 
+using JSFunction = std::function<JSValueRef(JSContextRef, JSObjectRef, size_t, const JSValueRef[])>;
+
+JSObjectRef makeFunction(
+    JSContextRef ctx,
+    const char* name,
+    JSFunction function);
+
+void installGlobalFunction(
+    JSGlobalContextRef ctx,
+    const char* name,
+    JSFunction function);
+
+JSObjectRef makeFunction(
+    JSGlobalContextRef ctx,
+    const char* name,
+    JSObjectCallAsFunctionCallback callback);
+
 void installGlobalFunction(
     JSGlobalContextRef ctx,
     const char* name,
@@ -43,11 +57,7 @@ void installGlobalProxy(
     const char* name,
     JSObjectGetPropertyCallback callback);
 
-JSValueRef makeJSCException(
-    JSContextRef ctx,
-    const char* exception_text);
-
-String jsStringFromBigString(const JSBigString& bigstr);
+void removeGlobal(JSGlobalContextRef ctx, const char* name);
 
 JSValueRef evaluateScript(
     JSContextRef ctx,
@@ -65,8 +75,6 @@ void formatAndThrowJSException(
     JSContextRef ctx,
     JSValueRef exn,
     JSStringRef sourceURL);
-
-JSValueRef makeJSError(JSContextRef ctx, const char *error);
 
 JSValueRef translatePendingCppExceptionToJSError(JSContextRef ctx, const char *exceptionLocation);
 JSValueRef translatePendingCppExceptionToJSError(JSContextRef ctx, JSObjectRef jsFunctionCause);
@@ -90,7 +98,7 @@ inline JSObjectCallAsFunctionCallback exceptionWrapMethod() {
         return (*method)(ctx, function, thisObject, argumentCount, arguments, exception);
       } catch (...) {
         *exception = translatePendingCppExceptionToJSError(ctx, function);
-        return JSValueMakeUndefined(ctx);
+        return JSC_JSValueMakeUndefined(ctx);
       }
     }
   };
