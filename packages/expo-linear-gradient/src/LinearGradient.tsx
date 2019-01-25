@@ -35,13 +35,22 @@ export default class LinearGradient extends React.Component<Props> {
         {...props}
         colors={colors.map(processColor)}
         locations={locations}
-        startPoint={start ? _normalizePoint(start) : undefined}
-        endPoint={end ? _normalizePoint(end) : undefined}
+        startPoint={_normalizePoint(start)}
+        endPoint={_normalizePoint(end)}
       />
     );
   }
 }
 
-function _normalizePoint(point: Point): [number, number] {
+function _normalizePoint(point: Point | null | undefined): [number, number] | undefined {
+  if (!point) {
+    return undefined;
+  }
+
+  if (Array.isArray(point) && point.length !== 2) {
+    console.warn('start and end props for LinearGradient must be of the format [x,y] or {x, y}');
+    return undefined;
+  }
+
   return Array.isArray(point) ? point : [point.x, point.y];
 }

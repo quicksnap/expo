@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, requireNativeComponent } from 'react-native';
+import { View } from 'react-native';
+import { requireNativeViewManager } from 'expo-core';
 
 type Props = {
   colors: number[];
@@ -16,4 +17,4 @@ export default class NativeLinearGradient extends React.PureComponent<Props> {
   }
 }
 
-const BaseNativeLinearGradient = requireNativeComponent('ExponentLinearGradient');
+const BaseNativeLinearGradient = requireNativeViewManager('ExpoLinearGradient');
