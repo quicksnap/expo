@@ -1,10 +1,10 @@
 // Copyright 2018-present 650 Industries. All rights reserved.
 
-#import <EXAppLoaderProvider/EXAppRecordInterface.h>
+#import <UMAppLoader/UMAppRecordInterface.h>
 
-@protocol EXAppLoaderInterface <NSObject>
+@protocol UMAppLoaderInterface <NSObject>
 
-- (nonnull id<EXAppRecordInterface>)loadAppWithUrl:(nonnull NSString *)url
+- (nonnull id<UMAppRecordInterface>)loadAppWithUrl:(nonnull NSString *)url
                                            options:(nullable NSDictionary *)options
                                           callback:(nullable void(^)(BOOL success, NSError * _Nullable error))callback;
 
