@@ -12,6 +12,11 @@ import { ReviewEvent, ReviewComment, ReviewInput, ReviewOutput, ReviewStatus } f
  */
 const REVIEWERS = [checkMissingChangelogs];
 
+enum Label {
+  APPROVED = 'bot: approved',
+  REJECTED = 'bot: rejected',
+}
+
 /**
  * Goes through the changes included in given pull request and checks if they meet basic requirements.
  */
@@ -68,6 +73,7 @@ export async function reviewPullRequestAsync(prNumber: number) {
   // If it's the first review and there is nothing to complain,
   // just return early — no need to bother PR's author.
   if (!activeOutputs.length && !comments.length && !previousReviews.length) {
+    await switchLabelsAsync(pr, Label.REJECTED, Label.APPROVED);
     logger.success('🥳 Everything looks good to me! There is no need to submit a review.');
     return;
   }
@@ -85,6 +91,14 @@ export async function reviewPullRequestAsync(prNumber: number) {
     comments,
   });
   logger.info('📝 Submitted new review at:', chalk.blue(review.html_url));
+
+  // As we never approve the PR by the bot (don't want to bypass the "at least one approval" requirement),
+  // adding appropriate labels instead seems to be a good compromise and makes it clear which PRs are ready to be reviewed by us.
+  if (event === ReviewEvent.REQUEST_CHANGES) {
+    await switchLabelsAsync(pr, Label.APPROVED, Label.REJECTED);
+  } else {
+    await switchLabelsAsync(pr, Label.REJECTED, Label.APPROVED);
+  }
 
   // Previous reviews are no longer useful — we would delete them, but
   // unfortunately they cannot be deleted entirely so we only make them smaller.
@@ -136,4 +150,25 @@ function getReviewEventFromOutputs(outputs: ReviewOutput[]): GitHub.PullRequestR
  */
 function getReviewCommentsFromOutputs(outputs: ReviewOutput[]): ReviewComment[] {
   return ([] as ReviewComment[]).concat(...outputs.map((output) => output.comments ?? []));
+}
+
+/**
+ * Replaces one label with another and ensures that these API calls
+ * won't throw errors when label is already removed or added.
+ */
+async function switchLabelsAsync(
+  pr: GitHub.PullRequest,
+  labelToRemove: string,
+  labelToAdd: string
+) {
+  const labels = pr.labels.map((label) => label.name);
+
+  if (labels.includes(labelToRemove) && labelToRemove !== labelToAdd) {
+    logger.info(`🏷 Removing ${chalk.yellow(labelToRemove)} label`);
+    await GitHub.removeIssueLabelAsync(pr.number, labelToRemove);
+  }
+  if (!labels.includes(labelToAdd)) {
+    logger.info(`🏷 Adding ${chalk.yellow(labelToAdd)} label`);
+    await GitHub.addIssueLabelsAsync(pr.number, [labelToAdd]);
+  }
 }
