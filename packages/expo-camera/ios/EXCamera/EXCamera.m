@@ -540,7 +540,27 @@ previewPhotoSampleBuffer:(CMSampleBufferRef)previewPhotoSampleBuffer
       [connection setPreferredVideoStabilizationMode:self.videoStabilizationMode];
     }
     [connection setVideoOrientation:[EXCameraUtils videoOrientationForDeviceOrientation:[[UIDevice currentDevice] orientation]]];
+    
+    if (options[@"codec"]) {
+      AVVideoCodecType videoCodecType = [EXCameraUtils videoCodecForType: [options[@"codec"] integerValue]];
 
+      if ([self.movieFileOutput.availableVideoCodecTypes containsObject:videoCodecType]) {
+        [self.movieFileOutput setOutputSettings: @{AVVideoCodecKey: videoCodecType} forConnection: connection];    
+        self.videoCodecType = videoCodecType;
+      } else {
+        if ([videoCodecType isEqualToString: @"VIDEO_CODEC_UNKNOWN"]) {
+          videoCodecType = options[@"codec"];
+        }
+        NSString *videoCodecErrorMessage = [NSString stringWithFormat: @"Video Codec '%@' is not supported on this device", videoCodecType];
+        reject(@"E_RECORDING_FAILED", videoCodecErrorMessage, nil);
+
+        [self cleanupMovieFileCapture];
+        _videoRecordedResolve = nil;
+        _videoRecordedReject = nil;
+
+        return;
+      }
+    }
     bool canBeMirrored = connection.isVideoMirroringSupported;
     bool shouldBeMirrored = options[@"mirror"] && [options[@"mirror"] boolValue];
     if (canBeMirrored && shouldBeMirrored) {
@@ -871,12 +891,17 @@ previewPhotoSampleBuffer:(CMSampleBufferRef)previewPhotoSampleBuffer
     }
   }
   if (success && _videoRecordedResolve != nil) {
-    _videoRecordedResolve(@{ @"uri": outputFileURL.absoluteString });
+    AVVideoCodecType videoCodec = self.videoCodecType;       
+    if (!videoCodec) {
+      videoCodec = [self.movieFileOutput.availableVideoCodecTypes firstObject];
+    }  
+    _videoRecordedResolve(@{ @"uri": outputFileURL.absoluteString, @"codec": videoCodec });
   } else if (_videoRecordedReject != nil) {
     _videoRecordedReject(@"E_RECORDING_FAILED", @"An error occurred while recording a video.", error);
   }
   _videoRecordedResolve = nil;
   _videoRecordedReject = nil;
+  _videoCodecType = nil;
 
   [self cleanupMovieFileCapture];
   // If face detection has been running prior to recording to file
