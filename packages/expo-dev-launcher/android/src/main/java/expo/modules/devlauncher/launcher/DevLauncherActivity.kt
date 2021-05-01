@@ -11,6 +11,8 @@ import com.facebook.react.bridge.ReactContext
 import expo.interfaces.devmenu.DevMenuManagerInterface
 import expo.interfaces.devmenu.DevMenuManagerProviderInterface
 import expo.modules.devlauncher.DevLauncherController
+import expo.modules.devlauncher.launcher.errors.DevLauncherAppError
+import expo.modules.devlauncher.launcher.errors.DevLauncherErrorActivity
 
 class DevLauncherActivity : ReactActivity(), ReactInstanceManager.ReactInstanceEventListener {
   private var devMenuManager: DevMenuManagerInterface? = null
@@ -41,6 +43,7 @@ class DevLauncherActivity : ReactActivity(), ReactInstanceManager.ReactInstanceE
       return
     }
 
+    reactInstanceManager.currentReactContext
     reactInstanceManager.addReactInstanceEventListener(this)
   }
 

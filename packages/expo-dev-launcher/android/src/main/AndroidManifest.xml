@@ -5,7 +5,13 @@
     <activity
       android:name="expo.modules.devlauncher.launcher.DevLauncherActivity"
       android:screenOrientation="portrait"
-      android:theme="@style/Theme.DevelopmentClient" />
+      android:theme="@style/Theme.DevLauncher.LauncherActivity" />
+
+    <activity
+      android:name="expo.modules.devlauncher.launcher.errors.DevLauncherErrorActivity"
+      android:screenOrientation="portrait"
+      android:theme="@style/Theme.DevLauncher.ErrorActivity"
+      />
   </application>
 
   <queries>
