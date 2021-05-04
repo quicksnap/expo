@@ -27,7 +27,7 @@ export default class Camera extends React.Component<CameraProps> {
     getAvailablePictureSizesAsync(ratio?: string): Promise<string[]>;
     recordAsync(options?: CameraRecordingOptions): Promise<{
         uri: string;
-        codec: VideoCodec;
+        codec?: VideoCodec;
     }>;
     stopRecording(): void;
     pausePreview(): void;
