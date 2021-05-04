@@ -36,11 +36,48 @@ export interface WebManifest {
   [key: string]: any;
 }
 
-export interface AppManifest extends ExpoConfig {
+interface NewManifestAsset {
+  url: string;
+}
+
+export interface NewManifest {
+  id: string;
+  createdAt: string;
+  extras?: {
+    [k: string]: any;
+  };
+  runtimeVersion: string;
+  launchAsset: NewManifestAsset;
+  assets: NewManifestAsset[];
+  updateMetadata: object;
+
+  // fields that have not yet been transferred to new manifests but are here to typecheck and keep track of what needs to be made to work
+  // with new manifests
+  name?: undefined;
+  hostUri?: undefined;
+  developer?: undefined;
+  web?: undefined;
+  currentFullName?: undefined;
+  ios?: undefined;
+  android?: undefined;
+  detach?: undefined;
+  notification?: undefined;
+  logUrl?: undefined;
+  extra?: undefined;
+  releaseChannel?: undefined;
+  iconUrl?: undefined;
+  publishedTime?: undefined;
+  scheme?: undefined;
+}
+
+export interface LegacyManifest extends ExpoConfig {
   /** Published Apps Only */
+  id?: string;
+  currentFullName?: string;
   releaseId?: string;
   revisionId?: string;
   releaseChannel?: string;
+  publishedTime?: string;
   packagerOpts?: {
     hostType?: string;
     dev?: boolean;
@@ -55,12 +92,20 @@ export interface AppManifest extends ExpoConfig {
     tool?: string;
     [key: string]: any;
   };
-  bundleUrl: string;
+  bundleUrl?: string;
   debuggerHost?: string;
   mainModuleName?: string;
   logUrl?: string;
-  [key: string]: any;
+  iconUrl?: string;
+  hostUri?: string;
+  scheme?: string;
 }
+
+export interface ManifestDerivedMethods {
+  getSDKVersion(): string | null;
+}
+
+export type AppManifest = LegacyManifest | NewManifest;
 
 export interface PlatformManifest {
   ios?: IOSManifest;
@@ -105,6 +150,7 @@ export interface NativeConstants {
   nativeAppVersion: string | null;
   nativeBuildVersion: string | null;
   manifest: AppManifest;
+  manifestDerivedMethods: ManifestDerivedMethods;
   sessionId: string;
   statusBarHeight: number;
   systemFonts: string[];

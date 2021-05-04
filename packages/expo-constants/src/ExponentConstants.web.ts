@@ -81,7 +81,7 @@ export default {
     return true;
   },
   get expoVersion(): string | null {
-    return this.manifest.sdkVersion || null;
+    return (this.manifest as WebManifest).sdkVersion || null;
   },
   get linkingUri(): string {
     if (Platform.isDOMAvailable) {

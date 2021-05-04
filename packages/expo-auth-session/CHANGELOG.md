@@ -6,6 +6,8 @@
 
 ### 🎉 New features
 
+- [updates] Add new manifest types to various non-native module code. ([#12817](https://github.com/expo/expo/pull/12817) by [@wschurman](https://github.com/wschurman))
+
 ### 🐛 Bug fixes
 
 ## 3.2.3 — 2021-04-13

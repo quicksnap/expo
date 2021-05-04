@@ -76,7 +76,7 @@ export class SessionUrlProvider {
   }
 
   private static getHostAddressQueryParams(): ParsedQs | undefined {
-    let hostUri: string = Constants.manifest?.hostUri;
+    let hostUri: string | undefined = manifest.hostUri;
     if (
       !hostUri &&
       (ExecutionEnvironment.StoreClient === Constants.executionEnvironment || resolveScheme({}))
@@ -92,7 +92,7 @@ export class SessionUrlProvider {
 
     const uriParts = hostUri?.split('?');
     try {
-      return qs.parse(uriParts?.[1]);
+      return qs.parse((uriParts as any)?.[1]);
     } catch {}
 
     return undefined;

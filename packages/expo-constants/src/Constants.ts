@@ -1,8 +1,10 @@
+import { getSDKVersionFromRuntimeVersion } from '@expo/sdk-runtime-versions';
 import { CodedError, NativeModulesProxy } from '@unimodules/core';
 import { Platform, NativeModules } from 'react-native';
 
 import {
   AndroidManifest,
+  AppManifest,
   AppOwnership,
   Constants,
   ExecutionEnvironment,
@@ -11,6 +13,8 @@ import {
   PlatformManifest,
   UserInterfaceIdiom,
   WebManifest,
+  LegacyManifest,
+  NewManifest,
 } from './Constants.types';
 import ExponentConstants from './ExponentConstants';
 
@@ -32,7 +36,7 @@ if (!ExponentConstants) {
   );
 }
 
-let manifest = null;
+let rawManifest: LegacyManifest | NewManifest | null = null;
 // If expo-updates defines a non-empty manifest, prefer that one
 if (NativeModulesProxy.ExpoUpdates) {
   let updatesManifest;
@@ -42,7 +46,7 @@ if (NativeModulesProxy.ExpoUpdates) {
     updatesManifest = JSON.parse(NativeModulesProxy.ExpoUpdates.manifestString);
   }
   if (updatesManifest && Object.keys(updatesManifest).length > 0) {
-    manifest = updatesManifest;
+    rawManifest = updatesManifest;
   }
 }
 
@@ -54,16 +58,16 @@ if (NativeModules.EXDevLauncher) {
   }
 
   if (devLauncherManifest && Object.keys(devLauncherManifest).length > 0) {
-    manifest = devLauncherManifest;
+    rawManifest = devLauncherManifest;
   }
 }
 
 // Fall back to ExponentConstants.manifest if we don't have one from Updates
-if (!manifest && ExponentConstants && ExponentConstants.manifest) {
-  manifest = ExponentConstants.manifest;
+if (!rawManifest && ExponentConstants && ExponentConstants.manifest) {
+  rawManifest = ExponentConstants.manifest;
   // On Android we pass the manifest in JSON form so this step is necessary
-  if (typeof manifest === 'string') {
-    manifest = JSON.parse(manifest);
+  if (typeof rawManifest === 'string') {
+    rawManifest = JSON.parse(rawManifest);
   }
 }
 
@@ -106,11 +110,46 @@ const constants = {
     }
     return nativeConstants.linkingUri;
   },
+  get manifest() {
+    return getManifest();
+  },
+  get manifestDerivedMethods() {
+    if ('updateMetadata' in this.manifest) {
+      const newManifest = this.manifest;
+      return {
+        getSDKVersion() {
+          return getSDKVersionFromRuntimeVersion(newManifest.runtimeVersion) ?? null;
+        },
+      };
+    } else {
+      const legacyManifest = this.manifest;
+      return {
+        getSDKVersion() {
+          return legacyManifest.sdkVersion || null;
+        },
+      };
+    }
+  },
+  /**
+   * Use `manifest` property by default.
+   * This property is only used for internal purposes.
+   * It behaves similarly to the original one, but suppresses warning upon no manifest available.
+   * `expo-asset` uses it to prevent users from seeing mentioned warning.
+   */
+  get __unsafeNoWarnManifest() {
+    return getManifest(true);
+  },
+  get __rawManifest_TEST() {
+    return rawManifest;
+  },
+  set __rawManifest_TEST(value: LegacyManifest | NewManifest | null) {
+    rawManifest = value;
+  },
 } as Constants;
 
-function getManifest(suppressWarning = false) {
-  if (!manifest) {
-    const invalidManifestType = manifest === null ? 'null' : 'undefined';
+function getManifest(suppressWarning = false): AppManifest | null {
+  if (!rawManifest) {
+    const invalidManifestType = rawManifest === null ? 'null' : 'undefined';
     if (
       nativeConstants.executionEnvironment === ExecutionEnvironment.Bare &&
       Platform.OS !== 'web'
@@ -132,32 +171,8 @@ function getManifest(suppressWarning = false) {
       );
     }
   }
-  return manifest;
-}
 
-Object.defineProperties(constants, {
-  manifest: {
-    enumerable: true,
-    get() {
-      return getManifest();
-    },
-    // This setter is only useful to mock the value for tests
-    set(value) {
-      manifest = value;
-    },
-  },
-  /**
-   * Use `manifest` property by default.
-   * This property is only used for internal purposes.
-   * It behaves similarly to the original one, but suppresses warning upon no manifest available.
-   * `expo-asset` uses it to prevent users from seeing mentioned warning.
-   */
-  __unsafeNoWarnManifest: {
-    enumerable: true,
-    get() {
-      return getManifest(true);
-    },
-  },
-});
+  return rawManifest;
+}
 
 export default constants as Constants;

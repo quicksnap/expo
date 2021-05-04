@@ -42,6 +42,7 @@
   },
   "dependencies": {
     "@expo/config": "^3.3.35",
+    "@expo/sdk-runtime-versions": "^1.0.0",
     "uuid": "^3.3.2"
   }
 }
