@@ -508,26 +508,7 @@ previewPhotoSampleBuffer:(CMSampleBufferRef)previewPhotoSampleBuffer
   }
 
   if (_movieFileOutput != nil && !_movieFileOutput.isRecording && _videoRecordedResolve == nil && _videoRecordedReject == nil) {
-    if (options[@"maxDuration"]) {
-      Float64 maxDuration = [options[@"maxDuration"] floatValue];
-      _movieFileOutput.maxRecordedDuration = CMTimeMakeWithSeconds(maxDuration, 30);
-    }
 
-    if (options[@"maxFileSize"]) {
-      _movieFileOutput.maxRecordedFileSize = [options[@"maxFileSize"] integerValue];
-    }
-
-    AVCaptureSessionPreset preset;
-    if (options[@"quality"]) {
-      EXCameraVideoResolution resolution = [options[@"quality"] integerValue];
-      preset = [EXCameraUtils captureSessionPresetForVideoResolution:resolution];
-    } else if ([_session.sessionPreset isEqual:AVCaptureSessionPresetPhoto]) {
-      preset = AVCaptureSessionPresetHigh;
-    }
-
-    if (preset != nil) {
-      [self updateSessionPreset:preset];
-    }
 
     bool shouldBeMuted = options[@"mute"] && [options[@"mute"] boolValue];
     [self updateSessionAudioIsMuted:shouldBeMuted];
@@ -541,26 +522,8 @@ previewPhotoSampleBuffer:(CMSampleBufferRef)previewPhotoSampleBuffer
     }
     [connection setVideoOrientation:[EXCameraUtils videoOrientationForDeviceOrientation:[[UIDevice currentDevice] orientation]]];
     
-    if (options[@"codec"]) {
-      AVVideoCodecType videoCodecType = [EXCameraUtils videoCodecForType: [options[@"codec"] integerValue]];
-
-      if ([self.movieFileOutput.availableVideoCodecTypes containsObject:videoCodecType]) {
-        [self.movieFileOutput setOutputSettings: @{AVVideoCodecKey: videoCodecType} forConnection: connection];    
-        self.videoCodecType = videoCodecType;
-      } else {
-        if ([videoCodecType isEqualToString: @"VIDEO_CODEC_UNKNOWN"]) {
-          videoCodecType = options[@"codec"];
-        }
-        NSString *videoCodecErrorMessage = [NSString stringWithFormat: @"Video Codec '%@' is not supported on this device", videoCodecType];
-        reject(@"E_RECORDING_FAILED", videoCodecErrorMessage, nil);
-
-        [self cleanupMovieFileCapture];
-        _videoRecordedResolve = nil;
-        _videoRecordedReject = nil;
-
-        return;
-      }
-    }
+    [self setVideoOptions:options forConnection:connection onReject: reject];
+    
     bool canBeMirrored = connection.isVideoMirroringSupported;
     bool shouldBeMirrored = options[@"mirror"] && [options[@"mirror"] boolValue];
     if (canBeMirrored && shouldBeMirrored) {
@@ -586,6 +549,54 @@ previewPhotoSampleBuffer:(CMSampleBufferRef)previewPhotoSampleBuffer
       self.videoRecordedReject = reject;
     });
   }
+}
+
+- (void)setVideoOptions:(NSDictionary *)options forConnection:(AVCaptureConnection *)connection onReject:(UMPromiseRejectBlock)reject
+{
+  UM_WEAKIFY(self);
+  dispatch_async(_sessionQueue, ^{
+    UM_STRONGIFY(self);
+    
+    if (options[@"maxDuration"]) {
+      Float64 maxDuration = [options[@"maxDuration"] floatValue];
+      self.movieFileOutput.maxRecordedDuration = CMTimeMakeWithSeconds(maxDuration, 30);
+    }
+
+    if (options[@"maxFileSize"]) {
+      self.movieFileOutput.maxRecordedFileSize = [options[@"maxFileSize"] integerValue];
+    }
+    
+    AVCaptureSessionPreset preset;
+    if (options[@"quality"]) {
+      EXCameraVideoResolution resolution = [options[@"quality"] integerValue];
+      preset = [EXCameraUtils captureSessionPresetForVideoResolution:resolution];
+    } else if ([self.session.sessionPreset isEqual:AVCaptureSessionPresetPhoto]) {
+      preset = AVCaptureSessionPresetHigh;
+    }
+
+    if (preset != nil) {
+      [self updateSessionPreset:preset];
+    }
+    
+    if (options[@"codec"]) {
+      AVVideoCodecType videoCodecType = [EXCameraUtils videoCodecForType: [options[@"codec"] integerValue]];
+
+      if ([self.movieFileOutput.availableVideoCodecTypes containsObject:videoCodecType]) {
+        [self.movieFileOutput setOutputSettings: @{AVVideoCodecKey: videoCodecType} forConnection: connection];
+        self.videoCodecType = videoCodecType;
+      } else {
+        if ([videoCodecType isEqualToString: @"VIDEO_CODEC_UNKNOWN"]) {
+          videoCodecType = options[@"codec"];
+        }
+        NSString *videoCodecErrorMessage = [NSString stringWithFormat: @"Video Codec '%@' is not supported on this device", videoCodecType];
+        reject(@"E_RECORDING_FAILED", videoCodecErrorMessage, nil);
+
+        [self cleanupMovieFileCapture];
+        self.videoRecordedResolve = nil;
+        self.videoRecordedReject = nil;
+      }
+    }
+  });
 }
 
 - (void)maybeStartFaceDetection:(BOOL)mirrored {
@@ -891,11 +902,7 @@ previewPhotoSampleBuffer:(CMSampleBufferRef)previewPhotoSampleBuffer
     }
   }
   if (success && _videoRecordedResolve != nil) {
-    AVVideoCodecType videoCodec = self.videoCodecType;       
-    if (!videoCodec) {
-      videoCodec = [self.movieFileOutput.availableVideoCodecTypes firstObject];
-    }  
-    _videoRecordedResolve(@{ @"uri": outputFileURL.absoluteString, @"codec": videoCodec });
+    _videoRecordedResolve(@{ @"uri": outputFileURL.absoluteString });
   } else if (_videoRecordedReject != nil) {
     _videoRecordedReject(@"E_RECORDING_FAILED", @"An error occurred while recording a video.", error);
   }

@@ -253,28 +253,6 @@ export async function test(t, { setPortalChild, cleanupPortal }) {
       });
 
       if (Platform.OS === 'ios') {
-        t.it('returns the default codec of the video', async () => {
-          await mountAndWaitFor(<Camera ref={refSetter} style={style} />);
-          const recordingPromise = instance.recordAsync();
-          await waitFor(2500);
-          instance.stopRecording();
-          const response = await recordingPromise;
-          t.expect(response).toBeDefined();
-          t.expect(response.codec).toMatch('hvc1');
-        });
-
-        t.it('uses the specified codec', async () => {
-          await mountAndWaitFor(<Camera ref={refSetter} style={style} />);
-          const recordingPromise = instance.recordAsync({
-            codec: Camera.Constants.VideoCodec.H264,
-          });
-          await waitFor(2500);
-          instance.stopRecording();
-          const response = await recordingPromise;
-          t.expect(response).toBeDefined();
-          t.expect(response.codec).toMatch('avc1');
-        });
-
         t.it('throws for an unavailable codec', async () => {
           await mountAndWaitFor(<Camera ref={refSetter} style={style} />);
 
@@ -290,7 +268,7 @@ export async function test(t, { setPortalChild, cleanupPortal }) {
         t.it('returns available codecs', async () => {
           const codecs = await Camera.getAvailableVideoCodecsAsync();
           t.expect(codecs).toBeDefined();
-          t.expect(codecs.includes('hvc1')).toBe(true);
+          t.expect(codecs.length).toBeGreaterThan(0);
         });
       }
 
