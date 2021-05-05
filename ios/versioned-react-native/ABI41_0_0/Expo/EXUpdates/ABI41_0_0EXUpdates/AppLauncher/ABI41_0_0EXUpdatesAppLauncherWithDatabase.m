@@ -50,7 +50,7 @@ static NSString * const ABI41_0_0EXUpdatesAppLauncherErrorDomain = @"AppLauncher
 
 + (void)launchableUpdateWithConfig:(ABI41_0_0EXUpdatesConfig *)config
                           database:(ABI41_0_0EXUpdatesDatabase *)database
-                   selectionPolicy:(id<ABI41_0_0EXUpdatesSelectionPolicy>)selectionPolicy
+                   selectionPolicy:(ABI41_0_0EXUpdatesSelectionPolicy *)selectionPolicy
                         completion:(ABI41_0_0EXUpdatesAppLauncherUpdateCompletionBlock)completion
                    completionQueue:(dispatch_queue_t)completionQueue
 {
@@ -88,7 +88,7 @@ static NSString * const ABI41_0_0EXUpdatesAppLauncherErrorDomain = @"AppLauncher
   });
 }
 
-- (void)launchUpdateWithSelectionPolicy:(id<ABI41_0_0EXUpdatesSelectionPolicy>)selectionPolicy
+- (void)launchUpdateWithSelectionPolicy:(ABI41_0_0EXUpdatesSelectionPolicy *)selectionPolicy
                              completion:(ABI41_0_0EXUpdatesAppLauncherCompletionBlock)completion
 {
   NSAssert(!_completion, @"ABI41_0_0EXUpdatesAppLauncher:launchUpdateWithSelectionPolicy:successBlock should not be called twice on the same instance");

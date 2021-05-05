@@ -4,28 +4,26 @@
 #import <ABI41_0_0EXUpdates/ABI41_0_0EXUpdatesEmbeddedAppLoader.h>
 #import <ABI41_0_0EXUpdates/ABI41_0_0EXUpdatesUpdate+Private.h>
 #import <ABI41_0_0EXUpdates/ABI41_0_0EXUpdatesUtils.h>
+#import <ABI41_0_0EXUpdates/ABI41_0_0EXUpdatesBareRawManifest.h>
 
 NS_ASSUME_NONNULL_BEGIN
 
 @implementation ABI41_0_0EXUpdatesBareUpdate
 
-+ (ABI41_0_0EXUpdatesUpdate *)updateWithBareManifest:(NSDictionary *)manifest
-                                     config:(ABI41_0_0EXUpdatesConfig *)config
-                                   database:(ABI41_0_0EXUpdatesDatabase *)database
++ (ABI41_0_0EXUpdatesUpdate *)updateWithBareRawManifest:(ABI41_0_0EXUpdatesBareRawManifest *)manifest
+                                        config:(ABI41_0_0EXUpdatesConfig *)config
+                                      database:(ABI41_0_0EXUpdatesDatabase *)database
 {
   ABI41_0_0EXUpdatesUpdate *update = [[ABI41_0_0EXUpdatesUpdate alloc] initWithRawManifest:manifest
                                                                   config:config
                                                                 database:database];
 
-  id updateId = manifest[@"id"];
-  id commitTime = manifest[@"commitTime"];
-  id metadata = manifest[@"metadata"];
-  id assets = manifest[@"assets"];
-
-  NSAssert([updateId isKindOfClass:[NSString class]], @"update ID should be a string");
-  NSAssert([commitTime isKindOfClass:[NSNumber class]], @"commitTime should be a number");
-  NSAssert(!metadata || [metadata isKindOfClass:[NSDictionary class]], @"metadata should be null or an object");
-  NSAssert(!assets || [assets isKindOfClass:[NSArray class]], @"assets should be null or an array");
+  NSString *updateId = manifest.rawID;
+  NSNumber *commitTime = manifest.commitTimeNumber;
+  NSDictionary *metadata = manifest.metadata;
+  NSArray *assets = manifest.assets;
+  
+  NSAssert(updateId != nil, @"update ID should not be null");
 
   NSUUID *uuid = [[NSUUID alloc] initWithUUIDString:(NSString *)updateId];
   NSAssert(uuid, @"update ID should be a valid UUID");
@@ -53,7 +51,7 @@ NS_ASSUME_NONNULL_BEGIN
         NSAssert([mainBundleDir isKindOfClass:[NSString class]], @"asset nsBundleDir should be a string");
       }
 
-      NSString *key = [NSString stringWithFormat:@"%@.%@", packagerHash, type];
+      NSString *key = packagerHash;
       ABI41_0_0EXUpdatesAsset *asset = [[ABI41_0_0EXUpdatesAsset alloc] initWithKey:key type:(NSString *)type];
       asset.mainBundleDir = mainBundleDir;
       asset.mainBundleFilename = mainBundleFilename;
