@@ -2,6 +2,7 @@
 
 #import <ABI40_0_0EXUpdates/ABI40_0_0EXUpdatesAsset.h>
 #import <ABI40_0_0EXUpdates/ABI40_0_0EXUpdatesConfig.h>
+#import <ABI40_0_0EXUpdates/ABI40_0_0EXUpdatesRawManifest.h>
 
 @class ABI40_0_0EXUpdatesDatabase;
 
@@ -28,7 +29,10 @@ typedef NS_ENUM(NSInteger, ABI40_0_0EXUpdatesUpdateStatus) {
 @property (nonatomic, strong, readonly) NSArray<ABI40_0_0EXUpdatesAsset *> *assets;
 @property (nonatomic, assign, readonly) BOOL isDevelopmentMode;
 
-@property (nonatomic, strong, readonly) NSDictionary *rawManifest;
+@property (nonatomic, strong, readonly, nullable) NSDictionary *serverDefinedHeaders;
+@property (nonatomic, strong, readonly, nullable) NSDictionary *manifestFilters;
+
+@property (nonatomic, strong, readonly) ABI40_0_0EXUpdatesRawManifest *rawManifest;
 
 @property (nonatomic, assign) ABI40_0_0EXUpdatesUpdateStatus status;
 @property (nonatomic, strong) NSDate *lastAccessed;
@@ -44,12 +48,16 @@ typedef NS_ENUM(NSInteger, ABI40_0_0EXUpdatesUpdateStatus) {
                     database:(ABI40_0_0EXUpdatesDatabase *)database;
 
 + (instancetype)updateWithManifest:(NSDictionary *)manifest
+                          response:(nullable NSURLResponse *)response
                             config:(ABI40_0_0EXUpdatesConfig *)config
-                          database:(ABI40_0_0EXUpdatesDatabase *)database;
+                          database:(ABI40_0_0EXUpdatesDatabase *)database
+                             error:(NSError **)error;
 
 + (instancetype)updateWithEmbeddedManifest:(NSDictionary *)manifest
                                     config:(ABI40_0_0EXUpdatesConfig *)config
                                   database:(nullable ABI40_0_0EXUpdatesDatabase *)database;
+
++ (ABI40_0_0EXUpdatesRawManifest *)rawManifestForJSON:(NSDictionary *)manifestJSON;
 
 @end
 
