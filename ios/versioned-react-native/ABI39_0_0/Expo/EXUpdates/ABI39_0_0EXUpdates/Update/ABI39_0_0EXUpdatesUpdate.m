@@ -5,18 +5,22 @@
 #import <ABI39_0_0EXUpdates/ABI39_0_0EXUpdatesLegacyUpdate.h>
 #import <ABI39_0_0EXUpdates/ABI39_0_0EXUpdatesNewUpdate.h>
 #import <ABI39_0_0EXUpdates/ABI39_0_0EXUpdatesUpdate+Private.h>
+#import <ABI39_0_0EXUpdates/ABI39_0_0EXUpdatesBareRawManifest.h>
 
 NS_ASSUME_NONNULL_BEGIN
 
+NSString * const ABI39_0_0EXUpdatesUpdateErrorDomain = @"ABI39_0_0EXUpdatesUpdate";
+
+
 @interface ABI39_0_0EXUpdatesUpdate ()
 
-@property (nonatomic, strong, readwrite) NSDictionary *rawManifest;
+@property (nonatomic, strong, readwrite) ABI39_0_0EXUpdatesRawManifest* rawManifest;
 
 @end
 
 @implementation ABI39_0_0EXUpdatesUpdate
 
-- (instancetype)initWithRawManifest:(NSDictionary *)manifest
+- (instancetype)initWithRawManifest:(ABI39_0_0EXUpdatesRawManifest *)manifest
                              config:(ABI39_0_0EXUpdatesConfig *)config
                            database:(nullable ABI39_0_0EXUpdatesDatabase *)database
 {
@@ -25,6 +29,7 @@ NS_ASSUME_NONNULL_BEGIN
     _config = config;
     _database = database;
     _scopeKey = config.scopeKey;
+    _status = ABI39_0_0EXUpdatesUpdateStatusPending;
     _lastAccessed = [NSDate date];
     _isDevelopmentMode = NO;
   }
@@ -32,6 +37,7 @@ NS_ASSUME_NONNULL_BEGIN
 }
 
 + (instancetype)updateWithId:(NSUUID *)updateId
+                    scopeKey:(NSString *)scopeKey
                   commitTime:(NSDate *)commitTime
               runtimeVersion:(NSString *)runtimeVersion
                     metadata:(nullable NSDictionary *)metadata
@@ -39,12 +45,13 @@ NS_ASSUME_NONNULL_BEGIN
                         keep:(BOOL)keep
                       config:(ABI39_0_0EXUpdatesConfig *)config
                     database:(ABI39_0_0EXUpdatesDatabase *)database
-{
+{  
   // for now, we store the entire managed manifest in the metadata field
-  ABI39_0_0EXUpdatesUpdate *update = [[self alloc] initWithRawManifest:metadata ?: @{}
+  ABI39_0_0EXUpdatesUpdate *update = [[self alloc] initWithRawManifest:[self rawManifestForJSON:(metadata ?: @{})]
                                                        config:config
                                                      database:database];
   update.updateId = updateId;
+  update.scopeKey = scopeKey;
   update.commitTime = commitTime;
   update.runtimeVersion = runtimeVersion;
   update.metadata = metadata;
@@ -54,38 +61,55 @@ NS_ASSUME_NONNULL_BEGIN
 }
 
 + (instancetype)updateWithManifest:(NSDictionary *)manifest
+                          response:(nullable NSURLResponse *)response
                             config:(ABI39_0_0EXUpdatesConfig *)config
                           database:(ABI39_0_0EXUpdatesDatabase *)database
+                             error:(NSError ** _Nullable)error
 {
-  return [ABI39_0_0EXUpdatesLegacyUpdate updateWithLegacyManifest:manifest
-                                                  config:config
-                                                database:database];
+  if (![response isKindOfClass:[NSHTTPURLResponse class]]) {
+    if(error){
+      *error = [NSError errorWithDomain:ABI39_0_0EXUpdatesUpdateErrorDomain
+                                   code:1001
+                               userInfo:@{NSLocalizedDescriptionKey:@"response must be a NSHTTPURLResponse"}];
+    }
+    return nil;
+  }
+  
+  NSHTTPURLResponse *httpResponse = (NSHTTPURLResponse *)response;
+  NSDictionary *headerDictionary = [httpResponse allHeaderFields];
+  NSString *expoProtocolVersion = headerDictionary[@"expo-protocol-version"];
+  
+  if (expoProtocolVersion == nil) {
+    return [ABI39_0_0EXUpdatesLegacyUpdate updateWithLegacyManifest:[[ABI39_0_0EXUpdatesLegacyRawManifest alloc] initWithRawManifestJSON:manifest]
+                                                    config:config
+                                                  database:database];
+  } else if (expoProtocolVersion.integerValue == 0) {
+    return [ABI39_0_0EXUpdatesNewUpdate updateWithNewManifest:[[ABI39_0_0EXUpdatesNewRawManifest alloc] initWithRawManifestJSON:manifest]
+                                            response:response
+                                              config:config
+                                            database:database];
+  } else {
+    if(error){
+      *error = [NSError errorWithDomain:ABI39_0_0EXUpdatesUpdateErrorDomain
+                                   code:1000
+                               userInfo:@{NSLocalizedDescriptionKey:[NSString stringWithFormat:@"expo-protocol-version '%@' is invalid", expoProtocolVersion]}];
+    }
+    return nil;
+  }
 }
 
 + (instancetype)updateWithEmbeddedManifest:(NSDictionary *)manifest
                                     config:(ABI39_0_0EXUpdatesConfig *)config
                                   database:(nullable ABI39_0_0EXUpdatesDatabase *)database
 {
-  if (config.usesLegacyManifest) {
-    if (manifest[@"releaseId"]) {
-      return [ABI39_0_0EXUpdatesLegacyUpdate updateWithLegacyManifest:manifest
-                                                      config:config
-                                                    database:database];
-    } else {
-      return [ABI39_0_0EXUpdatesBareUpdate updateWithBareManifest:manifest
-                                                  config:config
-                                                database:database];
-    }
+  if (manifest[@"releaseId"]) {
+    return [ABI39_0_0EXUpdatesLegacyUpdate updateWithLegacyManifest:[[ABI39_0_0EXUpdatesLegacyRawManifest alloc] initWithRawManifestJSON:manifest]
+                                                    config:config
+                                                  database:database];
   } else {
-    if (manifest[@"runtimeVersion"]) {
-      return [ABI39_0_0EXUpdatesNewUpdate updateWithNewManifest:manifest
-                                                config:config
-                                              database:database];
-    } else {
-      return [ABI39_0_0EXUpdatesBareUpdate updateWithBareManifest:manifest
-                                                  config:config
-                                                database:database];
-    }
+    return [ABI39_0_0EXUpdatesBareUpdate updateWithBareRawManifest:[[ABI39_0_0EXUpdatesBareRawManifest alloc] initWithRawManifestJSON:manifest]
+                                                   config:config
+                                                 database:database];
   }
 }
 
@@ -99,6 +123,18 @@ NS_ASSUME_NONNULL_BEGIN
     });
   }
   return _assets;
+}
+
++ (nonnull ABI39_0_0EXUpdatesRawManifest *)rawManifestForJSON:(nonnull NSDictionary *)manifestJSON { 
+  ABI39_0_0EXUpdatesRawManifest *rawManifest;
+  if (manifestJSON[@"releaseId"]) {
+    rawManifest = [[ABI39_0_0EXUpdatesLegacyRawManifest alloc] initWithRawManifestJSON:manifestJSON];
+  } else if (manifestJSON[@"updateMetadata"]) {
+    rawManifest = [[ABI39_0_0EXUpdatesNewRawManifest alloc] initWithRawManifestJSON:manifestJSON];
+  } else {
+    rawManifest = [[ABI39_0_0EXUpdatesBareRawManifest alloc] initWithRawManifestJSON:manifestJSON];
+  }
+  return rawManifest;
 }
 
 @end

@@ -50,16 +50,23 @@ static NSString * const ABI39_0_0EXUpdatesAppLauncherErrorDomain = @"AppLauncher
 
 + (void)launchableUpdateWithConfig:(ABI39_0_0EXUpdatesConfig *)config
                           database:(ABI39_0_0EXUpdatesDatabase *)database
-                   selectionPolicy:(id<ABI39_0_0EXUpdatesSelectionPolicy>)selectionPolicy
+                   selectionPolicy:(ABI39_0_0EXUpdatesSelectionPolicy *)selectionPolicy
                         completion:(ABI39_0_0EXUpdatesAppLauncherUpdateCompletionBlock)completion
                    completionQueue:(dispatch_queue_t)completionQueue
 {
   dispatch_async(database.databaseQueue, ^{
     NSError *error;
     NSArray<ABI39_0_0EXUpdatesUpdate *> *launchableUpdates = [database launchableUpdatesWithConfig:config error:&error];
+    NSError *manifestFiltersError;
+    NSDictionary *manifestFilters = [database manifestFiltersWithScopeKey:config.scopeKey error:&manifestFiltersError];
     dispatch_async(completionQueue, ^{
       if (!launchableUpdates) {
         completion(error, nil);
+        return;
+      }
+      if (manifestFiltersError) {
+        completion(manifestFiltersError, nil);
+        return;
       }
 
       // We can only run an update marked as embedded if it's actually the update embedded in the
@@ -76,12 +83,12 @@ static NSString * const ABI39_0_0EXUpdatesAppLauncherErrorDomain = @"AppLauncher
         [filteredLaunchableUpdates addObject:update];
       }
 
-      completion(nil, [selectionPolicy launchableUpdateFromUpdates:filteredLaunchableUpdates]);
+      completion(nil, [selectionPolicy launchableUpdateFromUpdates:filteredLaunchableUpdates filters:manifestFilters]);
     });
   });
 }
 
-- (void)launchUpdateWithSelectionPolicy:(id<ABI39_0_0EXUpdatesSelectionPolicy>)selectionPolicy
+- (void)launchUpdateWithSelectionPolicy:(ABI39_0_0EXUpdatesSelectionPolicy *)selectionPolicy
                              completion:(ABI39_0_0EXUpdatesAppLauncherCompletionBlock)completion
 {
   NSAssert(!_completion, @"ABI39_0_0EXUpdatesAppLauncher:launchUpdateWithSelectionPolicy:successBlock should not be called twice on the same instance");
@@ -228,7 +235,7 @@ static NSString * const ABI39_0_0EXUpdatesAppLauncherErrorDomain = @"AppLauncher
   if (embeddedManifest) {
     ABI39_0_0EXUpdatesAsset *matchingAsset;
     for (ABI39_0_0EXUpdatesAsset *embeddedAsset in embeddedManifest.assets) {
-      if ([embeddedAsset.key isEqualToString:asset.key]) {
+      if (embeddedAsset.key && [embeddedAsset.key isEqualToString:asset.key]) {
         matchingAsset = embeddedAsset;
         break;
       }
